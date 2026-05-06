@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda - Peluquería Unisex</title>
+
+<style>
+    body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    color: white;
+
+    background: 
+        linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)),
+        url("https://d2zdpiztbgorvt.cloudfront.net/region1/mx/48436/biz_photo/f55ccb191c71457b8711f0f50a1d5d-purpura-studio-biz-photo-17c25e3271e843d8b2f7fc6988218a-booksy.jpeg?size=640x427");
+    background-size: cover;
+    background-position: center;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* CONTENEDOR */
+.container {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    padding: 25px;
+    border-radius: 15px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* TITULO */
+h1 {
+    text-align: center;
+    color: #f5c542;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+}
+
+/* LABELS */
+label {
+    display: block;
+    margin-top: 12px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* INPUTS Y SELECT */
+input, select {
+    width: 100%;
+    padding: 12px;
+    margin-top: 6px;
+    border-radius: 8px;
+    border: none;
+    font-size: 15px;
+    background: rgba(255,255,255,0.08);
+    color: white;
+    outline: none;
+    transition: 0.3s;
+}
+
+/* ARREGLAR COLOR DEL DROPDOWN */
+select option {
+    background: #1e1e1e;
+    color: white;
+}
+
+/* QUITAR ESTILO NATIVO Y PONER FLECHA BONITA */
+
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 18px;
+}
+
+/* FOCUS */
+input:focus, select:focus {
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 0 2px #f5c542;
+}
+
+/* BOTÓN */
+button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    background: linear-gradient(45deg, #f5c542, #ffdd70);
+    color: #222;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* HOVER BOTÓN */
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(245,197,66,0.4);
+}
+
+/* ERROR */
+.error {
+    color: #ff6b6b;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+/* CITAS */
+.citas {
+    margin-top: 25px;
+}
+
+/* TARJETA DE CITA */
+.cita {
+    background: rgba(255,255,255,0.08);
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: 0.3s;
+}
+
+/* HOVER CITA */
+.cita:hover {
+    background: rgba(255,255,255,0.12);
+}
+
+/* BOTÓN ELIMINAR */
+.btn-eliminar {
+    background: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: 0.3s;
+}
+
+.btn-eliminar:hover {
+    background: #ff1f1f;
+    transform: scale(1.05);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Agendar Cita</h1>
+
+    <label for="nombre">Nombre:</label>
+    <input type="text" id="nombre" aria-label="Nombre del cliente">
+
+    <label for="fecha">Fecha:</label>
+    <input type="date" id="fecha">
+
+    <label for="hora">Hora:</label>
+    <select id="hora" disabled>
+    <option value="">Selecciona una hora</option>
+</select>
+
+    <button id="btnAgendar">Agendar</button>
+
+    <div class="error" id="error" role="alert"></div>
+
+    <div class="citas">
+        <h3>Citas Agendadas</h3>
+        <div id="lista"></div>
+    </div>
+</div>
+
+<script>
+// ============================
+// UTILIDADES
+// ============================
+
+function normalizarHora(hora) {
+    const [h, m] = hora.split(":").map(Number);
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function generarHoras(dia) {
+    const select = document.getElementById("hora");
+    select.innerHTML = '<option value="">Selecciona una hora</option>';
+
+    let bloques = [];
+
+    // Domingo
+    if (dia === 0) return;
+
+    // Viernes y sábado
+    if (dia === 5 || dia === 6) {
+        bloques = [
+            { inicio: 8, fin: 14 }
+        ];
+    } else {
+        // Lunes a jueves
+        bloques = [
+            { inicio: 8, fin: 14 },
+            { inicio: 16, fin: 21 }
+        ];
+    }
+
+    bloques.forEach(bloque => {
+        for (let h = bloque.inicio; h < bloque.fin; h++) {
+            ["00", "30"].forEach(min => {
+                const hora = `${String(h).padStart(2, "0")}:${min}`;
+                select.innerHTML += `<option value="${hora}">${hora}</option>`;
+            });
+        }
+    });
+}
+
+const obtenerCitas = () => JSON.parse(localStorage.getItem("citas")) || [];
+
+function obtenerDiaLocal(fecha) {
+    const [year, month, day] = fecha.split("-");
+    return new Date(year, month - 1, day).getDay();
+}
+
+function validarIntervalo(hora) {
+    const [h, m] = hora.split(":").map(Number);
+
+    // Solo minutos 00 o 30
+    if (m !== 0 && m !== 30) return false;
+
+    return true;
+}
+
+function normalizarHora(hora) {
+    const [h, m] = hora.split(":").map(Number);
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+const guardarCitas = (citas) =>
+    localStorage.setItem("citas", JSON.stringify(citas));
+
+// ============================
+// VALIDACIÓN
+// ============================
+
+function validarHorario(fecha, hora) {
+    const day = obtenerDiaLocal(fecha);
+const [h, m] = hora.split(":").map(Number);
+    const hoy = new Date();
+const fechaSeleccionada = new Date(fecha + "T00:00");
+
+hoy.setHours(0,0,0,0);
+
+if (fechaSeleccionada < hoy) {
+    return "No puedes agendar en fechas pasadas 🕒.";
+}
+
+const ahora = new Date();
+
+if (fechaSeleccionada.toDateString() === ahora.toDateString()) {
+
+    if (h < ahora.getHours() || 
+       (h === ahora.getHours() && m <= ahora.getMinutes())) {
+        return "Esa hora ya pasó ⏰. Elige una hora futura.";
+    }
+}
+
+    if (day === 0) {
+        return "Lo sentimos 🙏, los domingos no tenemos servicio.";
+    }
+
+    if (!validarIntervalo(hora)) {
+        return "Selecciona horarios cada 30 minutos (ej: 8:00, 8:30).";
+    }
+
+    // VIERNES Y SÁBADO
+if (day === 5 || day === 6) {
+    if (h < 8 || h >= 14) {
+        return "Viernes y sábado: 8:00 a 14:00 😊.";
+    }
+} 
+// LUNES A JUEVES
+else {
+    if (h < 8 || h >= 21) {
+        return "Lunes a jueves: 8-14 y 16-21.";
+    }
+
+    // BLOQUEAR COMIDA (14:00 a 16:00)
+    if (h >= 14 && h < 16) {
+        return "No hay servicio de 14:00 a 16:00 ⛔.";
+    }
+}
+
+    return null;
+}
+
+// ============================
+// FUNCIONES PRINCIPALES
+// ============================
+
+function agendar() {
+    const nombre = document.getElementById("nombre").value.trim();
+    const fecha = document.getElementById("fecha").value;
+    const hora = document.getElementById("hora").value;
+    const errorDiv = document.getElementById("error");
+
+    errorDiv.textContent = "";
+
+    if (!nombre || !fecha || !hora) {
+        errorDiv.textContent = "Completa todos los campos.";
+        return;
+    }
+
+    const error = validarHorario(fecha, hora);
+    if (error) {
+        errorDiv.textContent = error;
+        return;
+    }
+
+    let citas = obtenerCitas();
+
+    const existe = citas.some(c => 
+    c.fecha === fecha && normalizarHora(c.hora) === normalizarHora(hora)
+);
+    if (existe) {
+        errorDiv.textContent = "Ese horario ya está ocupado.";
+        return;
+    }
+
+    const confirmar = confirm(`¿Confirmar cita?\n\n👤 ${nombre}\n📅 ${fecha}\n⏰ ${hora}`);
+
+if (!confirmar) return;
+
+citas.push({ id: Date.now(), nombre, fecha, hora });
+guardarCitas(citas);
+
+    limpiarFormulario();
+    mostrarCitas();
+}
+
+function eliminarCita(id) {
+    let citas = obtenerCitas();
+    citas = citas.filter(c => c.id !== id);
+    guardarCitas(citas);
+    mostrarCitas();
+}
+
+function mostrarCitas() {
+    // Bloquear fechas pasadas en el calendario
+const inputFecha = document.getElementById("fecha");
+const hoy = new Date().toISOString().split("T")[0];
+inputFecha.setAttribute("min", hoy);
+    const lista = document.getElementById("lista");
+    lista.innerHTML = "";
+
+    let citas = obtenerCitas();
+
+    citas.sort((a,b) => new Date(a.fecha + " " + a.hora) - new Date(b.fecha + " " + b.hora));
+
+    citas.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "cita";
+
+        div.innerHTML = `
+            <span>${c.nombre} - ${c.fecha} ${c.hora}</span>
+            <button class="btn-eliminar" onclick="eliminarCita(${c.id})">X</button>
+        `;
+
+        lista.appendChild(div);
+    });
+}
+
+function limpiarFormulario() {
+    document.getElementById("nombre").value = "";
+    document.getElementById("fecha").value = "";
+
+    const horaInput = document.getElementById("hora");
+    horaInput.value = "";
+    horaInput.disabled = false;
+    horaInput.min = "08:00";
+    horaInput.max = "21:00";
+}
+
+// ============================
+// EVENTOS
+// ============================
+
+document.getElementById("fecha").addEventListener("change", function () {
+    const fecha = this.value;
+    const horaInput = document.getElementById("hora");
+    const errorDiv = document.getElementById("error");
+
+    errorDiv.textContent = "";
+
+    if (!fecha) return;
+
+    const dia = obtenerDiaLocal(fecha);
+
+    // Domingo
+    if (dia === 0) {
+        horaInput.innerHTML = '<option value="">Selecciona una hora</option>';
+        horaInput.disabled = true;
+        errorDiv.textContent = "Los domingos no están disponibles.";
+        return;
+    }
+
+    horaInput.disabled = false;
+
+    // Generar horas correctamente
+    generarHoras(dia);
+});
+
+document.getElementById("hora").addEventListener("change", function () {
+    if (!this.value) return;
+
+    let [h, m] = this.value.split(":").map(Number);
+
+    if (m !== 0 && m !== 30) {
+        m = m < 30 ? 0 : 30;
+        this.value = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+});
+
+document.getElementById("btnAgendar").addEventListener("click", agendar);
+
+// Permitir enviar con Enter
+document.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") agendar();
+});
+
+// Inicializar
+mostrarCitas();
+</script>
+
+</body>
+</html>
